@@ -47,7 +47,7 @@ jobs:
         cat build.log  # Output the log for immediate debugging
 
     - name: Upload Build Logs
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: build-log
         path: build.log
