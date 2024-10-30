@@ -37,7 +37,7 @@ android.permissions = INTERNET, ACCESS_NETWORK_STATE
 android.api = 30
 android.minapi = 21
 android.sdk = 30
-android.ndk = 21b
+android.ndk = r21b
 
 # (str) Additional Java classes to add (leave empty for this app)
 android.add_jars =
