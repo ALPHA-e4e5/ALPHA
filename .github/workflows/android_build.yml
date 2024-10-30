@@ -1,55 +1,30 @@
-name: Android Build with SDK Root Fix
-
-on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
-
+name: Build APK
+on: [push]
 jobs:
-  build:
+  build-android:
+    name: Build for Android
     runs-on: ubuntu-latest
-
     steps:
-    - name: Check out the code
-      uses: actions/checkout@v2
+      - name: Checkout
+        uses: actions/checkout@v2
 
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: '3.9'  # Specify your Python version
+      - name: Buildozer dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y git zip unzip python3-pip autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev automake
+          pip install --user --upgrade Cython virtualenv
+          pip install --user --upgrade buildozer
+          echo 'export PATH=$PATH:~/.local/bin/' >> ~/.bashrc
 
-    - name: Install Buildozer and dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install buildozer cython
+      - name: Handle Java path
+        run: |
+          export JAVA_HOME=/usr/lib/jvm/temurin-17-jdk-amd64
+          sudo update-java-alternatives --set ${JAVA_HOME}
+          export PATH=$JAVA_HOME/bin:$PATH
+          yes | buildozer -v android debug
 
-    - name: Install Android SDK and NDK
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y openjdk-11-jdk
-        mkdir -p "$HOME/.buildozer/android/platform"
-        curl -s "https://dl.google.com/android/repository/commandlinetools-linux-8512546_latest.zip" -o android_tools.zip
-        unzip android_tools.zip -d "$HOME/.buildozer/android/platform"
-        yes | $HOME/.buildozer/android/platform/cmdline-tools/bin/sdkmanager --sdk_root=$HOME/.buildozer/android/platform --licenses
-        $HOME/.buildozer/android/platform/cmdline-tools/bin/sdkmanager "platform-tools" "platforms;android-29" "build-tools;29.0.3" "extras;android;m2repository"
-
-    - name: Set Permissions for Android Directories
-      run: |
-        sudo chmod -R 777 "$HOME/.buildozer/android"
-
-    - name: Run Buildozer Build
-      env:
-        ANDROIDSDK: ${{ github.workspace }}/.buildozer/android/platform
-      #  ANDROID_SDK_ROOT: ${{ github.workspace }}/.buildozer/android/platform  # Set SDK Root explicitly
-      run: |
-        buildozer android debug > build.log 2>&1
-        cat build.log  # Output the log for immediate debugging
-
-    - name: Upload Build Logs
-      uses: actions/upload-artifact@v3
-      with:
-        name: build-log
-        path: build.log
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: package
+          path: bin/*.apk
