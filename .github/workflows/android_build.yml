@@ -1,88 +1,53 @@
-name: Build (with Buildozer master)
+name: Android Build with Debugging
+
 on:
   push:
-    branches-ignore:
-      - data
-      - gh-pages
-    tags:
-      - '**'
+    branches:
+      - main
   pull_request:
-    branches-ignore:
-      - data
-      - gh-pages
-  schedule:
-      - cron: 0 0 */4 * * # at 00:00 UTC every fourth day
+    branches:
+      - main
 
 jobs:
-  # Build job. Builds app for Android with Buildozer
-  build-android:
-    name: Build for Android (with Buildozer master)
+  build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-        with:
-          path: master
+    - name: Check out the code
+      uses: actions/checkout@v2
 
-      - name: Build with Buildozer
-        uses: ./master # REPLACE WITH ArtemSBulgakov/buildozer-action@v1
-        id: buildozer
-        with:
-          repository_root: master
-          workdir: test_app
-          buildozer_version: master
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.9'  # Specify your Python version
 
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: package
-          path: ${{ steps.buildozer.outputs.filename }}
+    - name: Install Buildozer and dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install buildozer cython
 
-      - name: Checkout
-        uses: actions/checkout@v2
-        with:
-          path: data
-          ref: data # Branch name
+    - name: Install Android SDK and NDK
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y openjdk-11-jdk
+        mkdir -p "$HOME/.buildozer/android/platform"
+        curl -s "https://dl.google.com/android/repository/commandlinetools-linux-8512546_latest.zip" -o android_tools.zip
+        unzip android_tools.zip -d "$HOME/.buildozer/android/platform" 
+        yes | $HOME/.buildozer/android/platform/cmdline-tools/bin/sdkmanager --sdk_root=$HOME/.buildozer/android/platform --licenses
 
-      - name: Set up Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: 3.7
-          architecture: x64
+    - name: Set Permissions for Android Directories
+      run: |
+        sudo chmod -R 777 "$HOME/.buildozer/android"
 
-      - name: Push binary to data branch
-        if: github.event_name == 'push'
-        run: python master/.ci/move_binary.py "${{ steps.buildozer.outputs.filename }}" master data bin-with-master
-name: Buildozer action
-description: Build Python package with Kivy Buildozer
-author: Artem Bulgakov
-branding:
-  icon: package
-  color: yellow
+    - name: Run Buildozer Build
+      env:
+        ANDROIDSDK: ${{ github.workspace }}/.buildozer/android/platform
+      run: |
+        buildozer android debug > build.log 2>&1
+        cat build.log  # Output the log for immediate debugging
 
-inputs:
-  command:
-    description: Command to start Buildozer. Set to `buildozer ios debug` for iOS
-    required: true
-    default: buildozer android debug
-  repository_root:
-    description: Path to cloned repository. Set if you specified path for `actions/checkout` action.
-    required: true
-    default: .
-  workdir:
-    description: Working directory where buildozer.spec is located. Set to `src` if buildozer.spec is in `src` directory
-    required: true
-    default: .
-  buildozer_version:
-    description: Version of Buildozer to install. By default installs latest release
-    required: true
-    default: stable
-
-outputs:
-  filename:
-    description: Filename of built package
-
-runs:
-  using: docker
-  image: Dockerfile
+    - name: Upload Build Logs
+      uses: actions/upload-artifact@v3
+      with:
+        name: build-log
+        path: build.log
