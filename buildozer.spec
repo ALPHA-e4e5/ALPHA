@@ -55,7 +55,7 @@ screen_density = 480
 # Uncomment the below line if you also want an .aab for Google Play
 # packaging a single .apk is typically easier for testing
 # android.aab = True
-source.dir = AirMouseApp
+#source.dir = AirMouseApp
 version = 1.0.0
 
 [buildozer]
