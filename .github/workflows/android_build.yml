@@ -43,7 +43,7 @@ jobs:
     - name: Run Buildozer Build
       env:
         ANDROIDSDK: ${{ github.workspace }}/.buildozer/android/platform
-        ANDROID_SDK_ROOT: ${{ github.workspace }}/.buildozer/android/platform  # Set SDK Root explicitly
+      #  ANDROID_SDK_ROOT: ${{ github.workspace }}/.buildozer/android/platform  # Set SDK Root explicitly
       run: |
         buildozer android debug > build.log 2>&1
         cat build.log  # Output the log for immediate debugging
