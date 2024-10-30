@@ -1,54 +1,57 @@
-name: Android Build with Debugging
-
+name: Build (with Buildozer master)
 on:
   push:
-    branches:
-      - main
+    branches-ignore:
+      - data
+      - gh-pages
+    tags:
+      - '**'
   pull_request:
-    branches:
-      - main
+    branches-ignore:
+      - data
+      - gh-pages
+  schedule:
+      - cron: 0 0 */4 * * # at 00:00 UTC every fourth day
 
 jobs:
-  build:
+  # Build job. Builds app for Android with Buildozer
+  build-android:
+    name: Build for Android (with Buildozer master)
     runs-on: ubuntu-latest
 
     steps:
-    - name: Check out the code
-      uses: actions/checkout@v2
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          path: master
 
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: '3.9'  # Specify your Python version
+      - name: Build with Buildozer
+        uses: ./master # REPLACE WITH ArtemSBulgakov/buildozer-action@v1
+        id: buildozer
+        with:
+          repository_root: master
+          workdir: test_app
+          buildozer_version: master
 
-    - name: Install Buildozer and dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install buildozer cython==0.20
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: package
+          path: ${{ steps.buildozer.outputs.filename }}
 
-    - name: Install Android SDK and NDK
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y openjdk-11-jdk
-        mkdir -p "$HOME/.buildozer/android/platform"
-        curl -s "https://dl.google.com/android/repository/commandlinetools-linux-8512546_latest.zip" -o android_tools.zip
-        unzip android_tools.zip -d "$HOME/.buildozer/android/platform" 
-        yes | $HOME/.buildozer/android/platform/cmdline-tools/bin/sdkmanager --sdk_root=$HOME/.buildozer/android/platform --licenses
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          path: data
+          ref: data # Branch name
 
-    - name: Set Permissions for Android Directories
-      run: |
-        sudo chmod -R 777 "$HOME/.buildozer/android"
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.7
+          architecture: x64
 
-    - name: Run Buildozer Build
-      env:
-        ANDROIDSDK: ${{ github.workspace }}/.buildozer/android/platform
-      run: |
-        buildozer android debug > build.log 2>&1
-        cat build.log  # Output the log for immediate debugging
-
-    - name: Upload Build Logs
-      uses: actions/upload-artifact@v3
-      with:
-        name: build-log
-        path: build.log
+      - name: Push binary to data branch
+        if: github.event_name == 'push'
+        run: python master/.ci/move_binary.py "${{ steps.buildozer.outputs.filename }}" master data bin-with-master
 
