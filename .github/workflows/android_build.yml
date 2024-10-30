@@ -43,6 +43,7 @@ jobs:
     - name: Run Buildozer Build
       env:
         ANDROIDSDK: ${{ github.workspace }}/.buildozer/android/platform
+        ANDROID_SDK_ROOT: ${{ github.workspace }}/.buildozer/android/platform
       run: |
         buildozer android debug 
        
