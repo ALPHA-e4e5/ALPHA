@@ -28,12 +28,13 @@ jobs:
 
     - name: Install Android SDK and NDK
       run: |
-        sudo apt-get update
+        # sudo apt-get update
         sudo apt-get install -y openjdk-11-jdk
         mkdir -p "$HOME/.buildozer/android/platform"
         curl -s "https://dl.google.com/android/repository/commandlinetools-linux-8512546_latest.zip" -o android_tools.zip
-        unzip android_tools.zip -d "$HOME/.buildozer/android/platform" 
+        unzip android_tools.zip -d "$HOME/.buildozer/android/platform"
         yes | $HOME/.buildozer/android/platform/cmdline-tools/bin/sdkmanager --sdk_root=$HOME/.buildozer/android/platform --licenses
+        $HOME/.buildozer/android/platform/cmdline-tools/bin/sdkmanager "platform-tools" "platforms;android-29" "build-tools;29.0.3" "extras;android;m2repository"
 
     - name: Set Permissions for Android Directories
       run: |
