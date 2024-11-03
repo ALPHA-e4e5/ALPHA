@@ -33,7 +33,7 @@ jobs:
           path: .buildozer
           key: ${{ runner.os }}-${{ steps.get-date.outputs.date }}-${{ hashFiles('buildozer.spec') }}
 
-      # Install dependencies
+      # Install dependencies (system packages and Android SDK)
       - name: Install dependencies
         run: |
           sudo apt update
@@ -50,8 +50,7 @@ jobs:
             libavformat-dev \
             libavcodec-dev \
             libunwind-dev \
-            zlib1g-dev
-          sudo apt-get install -y \
+            zlib1g-dev \
             libsqlite3-dev \
             sqlite3 \
             bzip2 \
@@ -65,8 +64,7 @@ jobs:
             uuid-dev \
             libgstreamer1.0 \
             gstreamer1.0-plugins-base \
-            gstreamer1.0-plugins-good
-          sudo apt-get install -y \
+            gstreamer1.0-plugins-good \
             zip \
             unzip \
             autoconf \
@@ -80,31 +78,36 @@ jobs:
             libssl-dev \
             automake
 
+          # Download and install Android SDK command-line tools
+          mkdir -p $HOME/android-sdk/cmdline-tools
+          curl -o sdk-tools.zip https://dl.google.com/android/repository/commandlinetools-linux-8512546_latest.zip
+          unzip sdk-tools.zip -d $HOME/android-sdk/cmdline-tools
+          mv $HOME/android-sdk/cmdline-tools/cmdline-tools $HOME/android-sdk/cmdline-tools/latest
+          export ANDROID_SDK_ROOT=$HOME/android-sdk
+          export PATH=$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$PATH
+
+          # Accept licenses and install SDK packages
+          yes | sdkmanager --licenses
+          sdkmanager "platform-tools" "platforms;android-31" "build-tools;31.0.0"
+
       # Set up Java 17 required by Gradle
       - name: Setup Java 17 required by Gradle
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'  # or 'zulu', 'liberica', etc.
+          distribution: 'temurin'
           java-version: '17'
 
       # Set up Python
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.8' #set your python version
+          python-version: '3.8'
 
       # Install pip dependencies
       - name: Install pip dependencies
         run: |
           pip install --upgrade pip
           pip install buildozer cython==0.29.33
-
-      # Install Android SDK and API level
-      - name: Install Android SDK
-        run: |
-          mkdir -p $HOME/android-sdk
-          export ANDROID_SDK_ROOT=$HOME/android-sdk
-          yes | sdkmanager --sdk_root=$ANDROID_SDK_ROOT "platform-tools" "platforms;android-31" "build-tools;31.0.0"
 
       # Build with Buildozer
       - name: Build with Buildozer
@@ -113,8 +116,6 @@ jobs:
           ANDROID_SDK_ROOT: $HOME/android-sdk
         run: |
           yes | buildozer -v android debug
-        # yes | buildozer -v android release
-        # run this for generating aab (Android App Bundle) [Required by google play]
 
       # Upload artifacts
       - name: Upload artifact
