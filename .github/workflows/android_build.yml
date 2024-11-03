@@ -99,9 +99,18 @@ jobs:
           pip install --upgrade pip
           pip install buildozer cython==0.29.33
 
+      # Install Android SDK and API level
+      - name: Install Android SDK
+        run: |
+          mkdir -p $HOME/android-sdk
+          export ANDROID_SDK_ROOT=$HOME/android-sdk
+          yes | sdkmanager --sdk_root=$ANDROID_SDK_ROOT "platform-tools" "platforms;android-31" "build-tools;31.0.0"
+
       # Build with Buildozer
       - name: Build with Buildozer
         id: buildozer
+        env:
+          ANDROID_SDK_ROOT: $HOME/android-sdk
         run: |
           yes | buildozer -v android debug
         # yes | buildozer -v android release
