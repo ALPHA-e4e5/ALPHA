@@ -15,13 +15,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Used to cache dependencies with a timeout
-      - name: Get Date
-        id: get-date
-        run: |
-          echo "date=$(date -u '+%Y%m%d')" >> $GITHUB_ENV
-        shell: bash
-
+      # Cache Buildozer global directory
       - name: Cache Buildozer global directory
         uses: actions/cache@v3
         with:
@@ -31,10 +25,10 @@ jobs:
       - uses: actions/cache@v3
         with:
           path: .buildozer
-          key: ${{ runner.os }}-${{ steps.get-date.outputs.date }}-${{ hashFiles('buildozer.spec') }}
+          key: ${{ runner.os }}-${{ hashFiles('buildozer.spec') }}
 
-      # Install dependencies (system packages and Android SDK)
-      - name: Install dependencies
+      # Install system dependencies
+      - name: Install system dependencies
         run: |
           sudo apt update
           sudo apt-get install -y \
@@ -55,7 +49,6 @@ jobs:
             sqlite3 \
             bzip2 \
             libbz2-dev \
-            zlib1g-dev \
             openssl \
             libgdbm-dev \
             libgdbm-compat-dev \
@@ -78,24 +71,28 @@ jobs:
             libssl-dev \
             automake
 
-          # Download and install Android SDK command-line tools
-          mkdir -p $HOME/android-sdk/cmdline-tools
-          curl -o sdk-tools.zip https://dl.google.com/android/repository/commandlinetools-linux-8512546_latest.zip
-          unzip sdk-tools.zip -d $HOME/android-sdk/cmdline-tools
-          mv $HOME/android-sdk/cmdline-tools/cmdline-tools $HOME/android-sdk/cmdline-tools/latest
-          export ANDROID_SDK_ROOT=$HOME/android-sdk
-          export PATH=$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$PATH
-
-          # Accept licenses and install SDK packages
-          yes | sdkmanager --licenses
-          sdkmanager "platform-tools" "platforms;android-31" "build-tools;31.0.0"
-
       # Set up Java 17 required by Gradle
       - name: Setup Java 17 required by Gradle
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
+
+      # Download Android command-line tools
+      - name: Download Android Command-line Tools
+        run: |
+          mkdir -p $HOME/android-sdk/cmdline-tools
+          curl -o sdk-tools.zip https://dl.google.com/android/repository/commandlinetools-linux-8512546_latest.zip
+          unzip sdk-tools.zip -d $HOME/android-sdk/cmdline-tools
+          mv $HOME/android-sdk/cmdline-tools/cmdline-tools $HOME/android-sdk/cmdline-tools/latest
+
+      # Install Android SDK packages
+      - name: Install Android SDK packages
+        run: |
+          export ANDROID_SDK_ROOT=$HOME/android-sdk
+          export PATH=$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$PATH
+          yes | sdkmanager --licenses
+          sdkmanager "platform-tools" "platforms;android-31" "build-tools;31.0.0"
 
       # Set up Python
       - name: Set up Python
@@ -111,10 +108,8 @@ jobs:
 
       # Build with Buildozer
       - name: Build with Buildozer
-        id: buildozer
-        env:
-          ANDROID_SDK_ROOT: $HOME/android-sdk
         run: |
+          export ANDROID_SDK_ROOT=$HOME/android-sdk
           yes | buildozer -v android debug
 
       # Upload artifacts
