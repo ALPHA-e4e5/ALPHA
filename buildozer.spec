@@ -34,9 +34,9 @@ presplash.filename = assets/presplash.png
 android.permissions = INTERNET, ACCESS_NETWORK_STATE
 
 # (int) API levels for Android
-#android.api = 31
+android.api = 30
 #android.minapi = 21
-#android.sdk = 31
+android.sdk = 30
 #android.ndk = r21b
 
 # (str) Additional Java classes to add (leave empty for this app)
