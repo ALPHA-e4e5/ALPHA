@@ -14,7 +14,7 @@ source.include_exts = py, png, jpg, kv
 
 # (list) Application requirements
 # Include plyer for gyroscope, websockets for communication, and kivy for UI
-requirements = python3, kivy, plyer, websockets
+requirements = python3, kivy, plyer, pyserial
 
 # (str) Supported orientation options
 orientation = portrait
@@ -31,12 +31,12 @@ presplash.filename = assets/presplash.png
 
 # (list) Permissions required by the app
 # 'INTERNET' for WebSocket communication and 'ACCESS_NETWORK_STATE' to verify network connectivity
-android.permissions = INTERNET, ACCESS_NETWORK_STATE
+android.permissions = INTERNET, ACCESS_NETWORK_STATE, USB_PERMISSION
 
 # (int) API levels for Android
 android.api = 30
-#android.minapi = 21
-android.sdk = 30
+android.minapi = 21
+#android.sdk = 30
 #android.ndk = r21b
 
 # (str) Additional Java classes to add (leave empty for this app)
