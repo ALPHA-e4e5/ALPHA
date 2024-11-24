@@ -1,100 +1,73 @@
-import asyncio
 import json
-from threading import Thread
+import subprocess
 from kivy.app import App
 from kivy.uix.button import Button
+from kivy.uix.slider import Slider
 from kivy.uix.label import Label
 from kivy.uix.boxlayout import BoxLayout
 from kivy.clock import Clock
 from plyer import gyroscope  # For accessing gyroscope data on Android
-import websockets
 
 class AirMouseClientApp(App):
     def build(self):
         self.sensitivity = 1.0
         self.connected = False
-        self.websocket = None
 
         # Build the layout
         layout = BoxLayout(orientation='vertical')
         self.status_label = Label(text="Not connected", font_size=20)
         layout.add_widget(self.status_label)
 
+        # Sensitivity control slider
+        self.sensitivity_slider = Slider(min=0.5, max=3.0, value=1.0)
+        self.sensitivity_slider.bind(value=self.on_sensitivity_change)
+        layout.add_widget(self.sensitivity_slider)
+
         # Mouse action buttons
         layout.add_widget(Button(text="Left Click", on_press=lambda _: self.send_click("leftClick")))
         layout.add_widget(Button(text="Right Click", on_press=lambda _: self.send_click("rightClick")))
-        layout.add_widget(Button(text="Drag/Release", on_press=self.toggle_drag_release))
-        layout.add_widget(Button(text="Refresh Connection", on_press=self.refresh_connection))
+        layout.add_widget(Button(text="Drag/Release", on_press=self.toggle_drag_release))  # Combined button
+        layout.add_widget(Button(text="Refresh Connection", on_press=self.refresh_connection))  # Refresh button
 
-        # Start a separate thread for WebSocket communication
-        self.websocket_thread = Thread(target=self.start_websocket_loop, daemon=True)
-        self.websocket_thread.start()
-
-        # Schedule periodic sending of position
+        # Schedule data sending
         Clock.schedule_interval(self.send_position, 0.1)
 
         return layout
 
-    def start_websocket_loop(self):
-        # Run the asyncio event loop in a separate thread
-        asyncio.run(self.websocket_loop())
-
-    async def websocket_loop(self):
-        while True:
-            if not self.connected:
-                await self.connect_to_server()
-            await asyncio.sleep(1)  # Prevent tight loop if not connected
-
-    async def connect_to_server(self):
-        try:
-            # Replace with the server IP address
-            self.websocket = await websockets.connect("ws://192.168.1.4:3000")
-            self.connected = True
-            self.update_status("Connected")
-            print("WebSocket connection established.")
-        except Exception as e:
-            self.update_status(f"Connection failed: {e}")
-
-    def update_status(self, message):
-        # Update UI elements from the main thread
-        Clock.schedule_once(lambda dt: setattr(self.status_label, 'text', message))
+    def on_sensitivity_change(self, instance, value):
+        self.sensitivity = value
 
     def send_position(self, dt):
-        # Only try to send data if connected and gyroscope is available
-        if self.connected and gyroscope.is_available():
-            x, y = gyroscope.orientation[:2]  # Adjust based on your gyroscope API
-            data = json.dumps({
-                "x": x * self.sensitivity,
-                "y": y * self.sensitivity
-            })
-            # Send position asynchronously
-            asyncio.run_coroutine_threadsafe(self.websocket.send(data), asyncio.get_event_loop())
+        if gyroscope.is_available():
+            # Capture gyroscope data
+            try:
+                x, y = gyroscope.orientation[:2]
+                data = f"{x * self.sensitivity},{y * self.sensitivity}"
+                self.send_to_pc(data)
+            except Exception as e:
+                self.status_label.text = f"Gyro Error: {e}"
 
     def send_click(self, click_type):
-        if self.connected:
-            data = json.dumps({"click": click_type})
-            asyncio.run_coroutine_threadsafe(self.websocket.send(data), asyncio.get_event_loop())
+        self.send_to_pc(f"CLICK:{click_type}")
 
     def toggle_drag_release(self, instance):
-        # Toggle between drag and release
-        if self.connected:
-            data = json.dumps({"click": "drag"})
-            asyncio.run_coroutine_threadsafe(self.websocket.send(data), asyncio.get_event_loop())
-            # Release after a short delay
-            Clock.schedule_once(lambda dt: asyncio.run_coroutine_threadsafe(
-                self.websocket.send(json.dumps({"click": "release"})), asyncio.get_event_loop()
-            ), 0.1)
+        self.send_to_pc("CLICK:drag")
+        Clock.schedule_once(lambda dt: self.send_to_pc("CLICK:release"), 0.1)
 
     def refresh_connection(self, instance):
-        # Disconnect and reconnect
-        self.connected = False
-        if self.websocket:
-            asyncio.run_coroutine_threadsafe(self.websocket.close(), asyncio.get_event_loop())
-        self.update_status("Reconnecting...")
+        self.status_label.text = "Refreshing connection..."
+        # Add connection handling logic if necessary.
 
-    def on_stop(self):
-        if self.connected and self.websocket:
-            asyncio.run_coroutine_threadsafe(self.websocket.close(), asyncio.get_event_loop())
+    def send_to_pc(self, data):
+        try:
+            subprocess.run(
+                ["adb", "shell", f"echo {data} > /data/local/tmp/gyro_data"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=True
+            )
+        except Exception as e:
+            self.status_label.text = f"Send Error: {e}"
 
 if __name__ == "__main__":
     AirMouseClientApp().run()
