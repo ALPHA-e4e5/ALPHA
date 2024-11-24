@@ -31,7 +31,7 @@ presplash.filename = assets/presplash.png
 
 # (list) Permissions required by the app
 # 'INTERNET' for WebSocket communication and 'ACCESS_NETWORK_STATE' to verify network connectivity
-android.permissions = INTERNET, ACCESS_NETWORK_STATE, USB_PERMISSION
+android.permissions = INTERNET, ACCESS_NETWORK_STATE, USB_PERMISSION, USE_SENSORS
 
 # (int) API levels for Android
 android.api = 30
