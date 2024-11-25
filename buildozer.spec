@@ -33,7 +33,7 @@ presplash.filename = assets/presplash.png
 # 'INTERNET' for WebSocket communication and 'ACCESS_NETWORK_STATE' to verify network connectivity
 android.permissions = INTERNET, ACCESS_NETWORK_STATE, USB_PERMISSION, BODY_SENSORS, WRITE_EXTERNAL_STORAGE, READ_EXTERNAL_STORAGE, FOREGROUND_SERVICE
 # (int) API levels for Android
-android.api = 31
+android.api = 30
 android.minapi = 21
 android.sdk = 31
 #android.ndk = 23b
