@@ -36,7 +36,7 @@ android.permissions = INTERNET, ACCESS_NETWORK_STATE, USB_PERMISSION, BODY_SENSO
 android.api = 31
 android.minapi = 21
 android.sdk = 31
-android.ndk = 23b
+#android.ndk = 23b
 android.package_name = com.yourdomain.airmouse
 # (str) Additional Java classes to add (leave empty for this app)
 android.add_jars =
