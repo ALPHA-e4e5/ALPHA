@@ -1,4 +1,5 @@
 import json
+import os
 from kivy.app import App
 from kivy.uix.button import Button
 from kivy.uix.slider import Slider
@@ -6,16 +7,25 @@ from kivy.uix.label import Label
 from kivy.uix.boxlayout import BoxLayout
 from kivy.clock import Clock
 from plyer import gyroscope
-from android.storage import app_storage_path
+from android.storage import primary_external_storage_path
+from android.permissions import request_permissions, Permission
 
 
 class AirMouseClientApp(App):
     def build(self):
-        # App setup
-        self.sensitivity = 1.0
-        self.gyro_file_path = f"{app_storage_path()}/gyro_data.json"
+        # Request necessary permissions
+        request_permissions([
+            Permission.INTERNET,
+            Permission.BODY_SENSORS,
+            Permission.WRITE_EXTERNAL_STORAGE,
+            Permission.READ_EXTERNAL_STORAGE,
+        ])
 
-        # UI setup
+        # Define file path
+        self.sensitivity = 1.0
+        self.gyro_file_path = os.path.join(primary_external_storage_path(), "AirMouse", "gyro_data.json")
+
+        # Create UI layout
         layout = BoxLayout(orientation="vertical")
         self.status_label = Label(text="Checking gyroscope...", font_size=20)
         layout.add_widget(self.status_label)
@@ -25,19 +35,19 @@ class AirMouseClientApp(App):
         self.sensitivity_slider.bind(value=self.on_sensitivity_change)
         layout.add_widget(self.sensitivity_slider)
 
-        # Mouse action buttons
+        # Buttons
         layout.add_widget(Button(text="Left Click", on_press=lambda _: self.write_action("leftClick")))
         layout.add_widget(Button(text="Right Click", on_press=lambda _: self.write_action("rightClick")))
         layout.add_widget(Button(text="Drag/Release", on_press=lambda _: self.write_action("drag_release")))
 
-        # Schedule gyroscope checks
+        # Check gyroscope availability
         Clock.schedule_once(self.check_gyroscope, 1)
         Clock.schedule_interval(self.update_gyroscope, 0.1)
 
         return layout
 
     def check_gyroscope(self, dt):
-        """Verify gyroscope availability."""
+        """Check gyroscope availability."""
         if gyroscope.is_available():
             self.status_label.text = "Gyroscope is active!"
             gyroscope.enable()
@@ -68,6 +78,7 @@ class AirMouseClientApp(App):
 
     def write_to_file(self, data):
         """Write data to the gyro file."""
+        os.makedirs(os.path.dirname(self.gyro_file_path), exist_ok=True)
         try:
             with open(self.gyro_file_path, "w") as gyro_file:
                 json.dump(data, gyro_file)
