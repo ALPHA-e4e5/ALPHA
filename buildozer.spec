@@ -14,7 +14,7 @@ source.include_exts = py, png, jpg, kv
 
 # (list) Application requirements
 # Include plyer for gyroscope, websockets for communication, and kivy for UI
-requirements = python3, kivy, plyer, pyserial, adbclient
+requirements = python3, kivy, plyer, pyserial
 
 # (str) Supported orientation options
 orientation = portrait
